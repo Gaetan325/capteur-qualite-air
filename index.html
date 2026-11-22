@@ -53,6 +53,7 @@ select { padding: 4px 8px; border-radius: 6px; border: 1px solid #9fb0a5; }
 <p>
   Période :
   <select id="periode">
+    <option value="-1h">Dernière heure</option>
     <option value="-6h">6 dernières heures</option>
     <option value="-24h" selected>24 dernières heures</option>
     <option value="-7d">7 derniers jours</option>
@@ -83,7 +84,7 @@ const DEVICE_ID = "";         // adresse MAC d'une carte, ou "" pour toutes
  
 // Une moyenne par intervalle selon la période : assez de points pour une
 // courbe lisible, pas trop pour rester rapide (7 jours en brut = 60 000 points).
-const MOYENNE = { "-6h": "5m", "-24h": "15m", "-7d": "1h" };
+const MOYENNE = { "-1h": "1m","-6h": "5m", "-24h": "15m", "-7d": "1h" };
  
 // Nom affiché, unité et couleur de la courbe de chaque champ de l'API
 const CHAMPS = {
