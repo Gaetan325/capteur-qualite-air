@@ -7,26 +7,51 @@
 <!-- Chart.js : la bibliothèque qui dessine les graphes, chargée depuis un CDN -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
-  body {
-    font-family: system-ui, sans-serif; color: #1b2420; background: #f6f7f6;
-    max-width: 900px; margin: 0 auto; padding: 16px;
-  }
-  h1 { margin-bottom: 4px; }
-  .carte {
-    background: #fff; border: 1px solid #d6ddd8; border-radius: 8px;
-    padding: 12px 16px; margin: 16px 0;
-  }
-  #valeurs { display: flex; flex-wrap: wrap; gap: 24px; }
-  .valeur b { display: block; font-size: 1.8rem; }
-  #etat { color: #5a6a60; }
-  #etat.erreur { color: #b3261e; }
+body {
+  font-family: system-ui, sans-serif; color: #1b2420; background: #eef3ef;
+  max-width: 900px; margin: 0 auto; padding: 0 16px 16px;
+}
+header {
+  background: linear-gradient(135deg, #1e7e5a, #2e9fbf); color: #fff;
+  margin: 0 -16px; padding: 24px 16px; border-radius: 0 0 16px 16px;
+}
+header h1 { margin: 0 0 4px; }
+header p { margin: 0; opacity: 0.9; }
+.carte {
+  background: #fff; border: 1px solid #d6ddd8; border-left: 6px solid #2e9fbf;
+  border-radius: 8px; padding: 12px 16px; margin: 16px 0;
+}
+.carte h2 { margin-top: 0; }
+#valeurs { display: flex; flex-wrap: wrap; gap: 12px; }
+.valeur {
+  flex: 1 1 130px; padding: 10px 14px; border-radius: 8px;
+  background: #eef3ef; border: 2px solid #d6ddd8;
+}
+.valeur b { display: block; font-size: 1.8rem; }
+.valeur.bon { background: #e3f5e8; border-color: #1e7e34; color: #14571f; }
+.valeur.moyen { background: #fff0d9; border-color: #e08a00; color: #8a5200; }
+.valeur.mauvais { background: #fde4e2; border-color: #b3261e; color: #8a1a14; }
+#etat { color: #5a6a60; }
+#etat.erreur { color: #b3261e; font-weight: bold; }
+select { padding: 4px 8px; border-radius: 6px; border: 1px solid #9fb0a5; }
 </style>
 </head>
 <body>
-
-<h1>Notre capteur</h1>
-<p>Mesures envoyées par la carte du groupe au serveur AirCarto.</p>
-
+<header>
+  <h1>Notre capteur</h1>
+  <p>Mesures envoyées par la carte du groupe au serveur AirCarto.</p>
+</header>
+ 
+<div class="carte">
+  <h2>Le projet</h2>
+  <p>Ce capteur mesure la qualité de l'air à l'IUT (BUT Mesures Physiques, Aix-Marseille) :
+  lieu d'installation à compléter.</p>
+  <p><b>PM1, PM2.5, PM10</b> : particules fines en suspension dans l'air, de moins de 1, 2,5 et 10 μm.
+  Plus elles sont petites, plus elles pénètrent profondément dans les poumons.</p>
+  <p><b>CO₂</b> : dioxyde de carbone. Dans une salle, il augmente avec le nombre de personnes
+  et indique si la pièce est assez aérée.</p>
+</div>
+ 
 <p>
   Période :
   <select id="periode">
@@ -36,42 +61,48 @@
   </select>
 </p>
 <p id="etat">Chargement…</p>
-
+ 
 <div class="carte">
   <h2>Dernière mesure</h2>
   <div id="valeurs"></div>
+  <p><small>Couleurs : PM2.5 vert jusqu'à 15 μg/m³, rouge au-delà (valeur guide sur 24 h de l'OMS, 2021).
+  CO₂ vert jusqu'à 1000 ppm, orange jusqu'à 1500 ppm, rouge au-delà (repères d'aération d'une salle).</small></p>
 </div>
-
+ 
 <div class="carte">
-  <h2>Particules (µg/m³)</h2>
+  <h2>Particules (μg/m³)</h2>
   <canvas id="graphe-pm"></canvas>
 </div>
+ 
 <div class="carte">
   <h2>Température (°C) et humidité (%)</h2>
   <canvas id="graphe-meteo"></canvas>
 </div>
+ 
 <div class="carte" id="carte-co2">
   <h2>CO₂ (ppm)</h2>
   <canvas id="graphe-co2"></canvas>
 </div>
-
+ 
 <script>
 // ---------- Réglages : à remplacer ----------
-const CLE = "df11842882fe41920df8379d7658069c";   // clé du groupe (32 caractères)
-const DEVICE_ID = "";      // adresse MAC d'une carte, ou "" pour toutes
-
+const CLE = "VOTRE_CLE";      // clé du groupe (32 caractères)
+const DEVICE_ID = "";         // adresse MAC d'une carte, ou "" pour toutes
+ 
 // Une moyenne par intervalle selon la période : assez de points pour une
 // courbe lisible, pas trop pour rester rapide (7 jours en brut = 60 000 points).
 const MOYENNE = { "-6h": "5m", "-24h": "15m", "-7d": "1h" };
-
-// Nom affiché et unité de chaque champ de l'API
+ 
+// Nom affiché, unité et couleur de la courbe de chaque champ de l'API
 const CHAMPS = {
-  pm1: ["PM1", "µg/m³"], pm25: ["PM2.5", "µg/m³"], pm10: ["PM10", "µg/m³"],
-  temp: ["Température", "°C"], hum: ["Humidité", "%"], co2: ["CO₂", "ppm"],
+  pm1: ["PM1", "μg/m³", "#2e9f5a"], pm25: ["PM2.5", "μg/m³", "#e07a1f"],
+  pm10: ["PM10", "μg/m³", "#8a5a44"],
+  temp: ["Température", "°C", "#d1495b"], hum: ["Humidité", "%", "#2e86c1"],
+  co2: ["CO₂", "ppm", "#6a4c93"],
 };
-
-const graphes = {};   // les graphes déjà dessinés, à remplacer au rechargement
-
+ 
+const graphes = {};  // les graphes déjà dessinés, à remplacer au rechargement
+ 
 // Demande les mesures au serveur et renvoie la liste des points.
 async function chargerMesures(periode) {
   const params = new URLSearchParams({ key: CLE, start: periode, freq: MOYENNE[periode] });
@@ -84,20 +115,21 @@ async function chargerMesures(periode) {
   }
   return json.points;
 }
-
+ 
 // Dessine (ou redessine) un graphe avec une courbe par champ.
 function dessiner(idCanvas, points, champs) {
   const etiquettes = points.map(p => new Date(p.time).toLocaleString("fr-FR",
     { weekday: "short", hour: "2-digit", minute: "2-digit" }));
   const courbes = champs
-    .filter(c => points.some(p => p[c] !== undefined))   // seulement les champs mesurés
+    .filter(c => points.some(p => p[c] !== undefined))  // seulement les champs mesurés
     .map(c => ({
       label: CHAMPS[c][0],
       data: points.map(p => p[c] ?? null),               // null = trou dans la courbe
+      borderColor: CHAMPS[c][2],
+      backgroundColor: CHAMPS[c][2],
       pointRadius: 0,
       borderWidth: 2,
     }));
-
   if (graphes[idCanvas]) graphes[idCanvas].destroy();
   graphes[idCanvas] = new Chart(document.getElementById(idCanvas), {
     type: "line",
@@ -106,7 +138,14 @@ function dessiner(idCanvas, points, champs) {
   });
   return courbes.length;
 }
-
+ 
+// Classe de couleur de la dernière valeur selon les seuils
+function couleur(champ, valeur) {
+  if (champ === "pm25") return valeur <= 15 ? "bon" : "mauvais";
+  if (champ === "co2") return valeur <= 1000 ? "bon" : (valeur <= 1500 ? "moyen" : "mauvais");
+  return "";
+}
+ 
 // Affiche la valeur la plus récente de chaque champ.
 function afficherDerniere(points) {
   const derniere = points[points.length - 1];
@@ -114,12 +153,12 @@ function afficherDerniere(points) {
     .filter(c => derniere[c] !== undefined)
     .map(c => {
       const [nom, unite] = CHAMPS[c];
-      const valeur = derniere[c].toFixed(c === "co2" ? 0 : 1);   // CO2 sans décimale
-      return `<div class="valeur">${nom}<b>${valeur} ${unite}</b></div>`;
+      const valeur = derniere[c].toFixed(c === "co2" ? 0 : 1);  // CO2 sans décimale
+      return `<div class="valeur ${couleur(c, derniere[c])}">${nom}<b>${valeur} ${unite}</b></div>`;
     });
   document.getElementById("valeurs").innerHTML = html.join("");
 }
-
+ 
 async function rafraichir() {
   const etat = document.getElementById("etat");
   const periode = document.getElementById("periode").value;
@@ -135,20 +174,20 @@ async function rafraichir() {
     const avecCo2 = dessiner("graphe-co2", points, ["co2"]);
     // Pas de CO2 sur un NebuleAir : on cache son graphe
     document.getElementById("carte-co2").hidden = (avecCo2 === 0);
-
     const date = new Date(points[points.length - 1].time).toLocaleString("fr-FR");
     etat.className = "";
     etat.textContent = `${points.length} points, moyenne sur ${MOYENNE[periode]}. `
-                     + `Dernière mesure : ${date}.`;
+      + `Dernière mesure : ${date}.`;
   } catch (erreur) {
     etat.className = "erreur";
     etat.textContent = "Erreur : " + erreur.message;
   }
 }
-
+ 
 document.getElementById("periode").addEventListener("change", rafraichir);
 rafraichir();
-setInterval(rafraichir, 5 * 60 * 1000);   // mise à jour toutes les 5 minutes
+setInterval(rafraichir, 5 * 60 * 1000);  // mise à jour toutes les 5 minutes
 </script>
 </body>
 </html>
+ 
